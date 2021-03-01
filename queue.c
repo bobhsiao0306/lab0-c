@@ -17,19 +17,27 @@ queue_t *q_new()
         printf("Memory allocation failed\n");
         exit(-1);
     } else /*malloc succeed*/
+    {
         q->head = NULL;
+        q->tail = NULL;
+        q->size = 0;
+    }
     return q;
 }
 
 /* Free all storage used by queue */
 void q_free(queue_t *q)
 {
+    if (q == NULL)
+        return;
     list_ele_t *p = q->head;
     while (p) {
         list_ele_t *tmp = p;
         p = p->next;
+        free(tmp->value);
         free(tmp);
     }
+    free(q);
 }
 
 /*
@@ -47,10 +55,17 @@ bool q_insert_head(queue_t *q, char *s)
     newh = malloc(sizeof(list_ele_t));
     if (newh == NULL)
         return false;
-    else {
-        newh->value = s;
+    newh->value = malloc(sizeof(char) * (strlen(s) + 1));
+    if (newh->value == NULL) {
+        free(newh);
+        return false;
+    } else {
+        strncpy(newh->value, s, strlen(s) + 1);
         newh->next = q->head;
         q->head = newh;
+        q->size++;
+        if (q->size == 1)
+            q->tail = q->head;
         return true;
     }
 }
@@ -64,10 +79,26 @@ bool q_insert_head(queue_t *q, char *s)
  */
 bool q_insert_tail(queue_t *q, char *s)
 {
-    /* TODO: You need to write the complete code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
-    return false;
+    list_ele_t *newh;
+    if (q == NULL)
+        return false;
+    newh = malloc(sizeof(list_ele_t));
+    if (newh == NULL)
+        return false;
+    newh->value = malloc(sizeof(char) * (strlen(s) + 1));
+    if (newh->value == NULL) {
+        free(newh);
+        return false;
+    } else {
+        strncpy(newh->value, s, strlen(s) + 1);
+        newh->next = NULL;
+        q->tail->next = newh;
+        q->tail = newh;
+        q->size++;
+        if (q->size == 1)
+            q->head = q->tail;
+        return true;
+    }
 }
 
 /*
@@ -80,9 +111,14 @@ bool q_insert_tail(queue_t *q, char *s)
  */
 bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
-    /* TODO: You need to fix up this code. */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (q == NULL || q->head == NULL)
+        return false;
+    strncpy(sp, q->head->value, bufsize - 1);
+    list_ele_t *tmp = q->head;
     q->head = q->head->next;
+    free(tmp->value);
+    free(tmp);
+    q->size--;
     return true;
 }
 
@@ -92,10 +128,7 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
-    return 0;
+    return q->size;
 }
 
 /*
@@ -107,8 +140,18 @@ int q_size(queue_t *q)
  */
 void q_reverse(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (q == NULL)
+        return;
+    list_ele_t *x = q->head;
+    list_ele_t *y = NULL;
+    list_ele_t *z = NULL;
+    while (x) {
+        z = y;
+        y = x;
+        y->next = z;
+        x = x->next;
+    }
+    q->head = y;
 }
 
 /*
@@ -120,4 +163,26 @@ void q_sort(queue_t *q)
 {
     /* TODO: You need to write the code for this function */
     /* TODO: Remove the above comment when you are about to implement. */
+    /*if(q == NULL || q->size == 0 || q->size == 1)
+        return;
+
+    list_ele_t *pivot = q->head;
+    int value = pivot->value;
+    node_t *p = pivot->next;
+    pivot->next = NULL;
+
+    node_t *left = NULL, *right = NULL;
+    while (p) {
+        node_t *n = p;
+        p = p->next;
+        list_add_node_t(n->value > value ? AAA : BBB, n);
+    }
+
+    quicksort(&left);
+    quicksort(&right);
+
+    node_t *result = NULL;
+    list_concat(&result, left);
+    CCC;
+    *list = result;*/
 }
