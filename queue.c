@@ -113,13 +113,16 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
     if (q == NULL || q->head == NULL)
         return false;
-    strncpy(sp, q->head->value, bufsize - 1);
-    list_ele_t *tmp = q->head;
-    q->head = q->head->next;
-    free(tmp->value);
-    free(tmp);
-    q->size--;
-    return true;
+    if (!strncmp(q->head->value, sp, strlen(sp))) {
+        list_ele_t *tmp = q->head;
+        q->head = q->head->next;
+        strncpy(sp, tmp->value, bufsize - 1);
+        free(tmp->value);
+        free(tmp);
+        q->size--;
+        return true;
+    } else
+        return false;
 }
 
 /*
@@ -142,14 +145,15 @@ void q_reverse(queue_t *q)
 {
     if (q == NULL)
         return;
+    q->tail = q->head;
     list_ele_t *x = q->head;
     list_ele_t *y = NULL;
     list_ele_t *z = NULL;
     while (x) {
         z = y;
         y = x;
-        y->next = z;
         x = x->next;
+        y->next = z;
     }
     q->head = y;
 }
@@ -161,28 +165,88 @@ void q_reverse(queue_t *q)
  */
 void q_sort(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
-    /*if(q == NULL || q->size == 0 || q->size == 1)
+    if (q == NULL || q->size == 0 || q->size == 1)
         return;
 
-    list_ele_t *pivot = q->head;
-    int value = pivot->value;
-    node_t *p = pivot->next;
-    pivot->next = NULL;
+    mergesort(&q->head);
 
-    node_t *left = NULL, *right = NULL;
-    while (p) {
-        node_t *n = p;
-        p = p->next;
-        list_add_node_t(n->value > value ? AAA : BBB, n);
+    list_ele_t *buf = q->head;
+    while (buf) {
+        q->tail = buf;
+        buf = buf->next;
+    }
+}
+
+void mergesort(list_ele_t **head)
+{
+    // base case — length 0 or 1
+    if (*head == NULL || (*head)->next == NULL) {
+        return;
     }
 
-    quicksort(&left);
-    quicksort(&right);
+    list_ele_t *a;
+    list_ele_t *b;
 
-    node_t *result = NULL;
-    list_concat(&result, left);
-    CCC;
-    *list = result;*/
+    // split `head` into `a` and `b` sublists
+    frontBackSplit(*head, &a, &b);
+
+    // recursively sort the sublists
+    mergesort(&a);
+    mergesort(&b);
+
+    // answer = merge the two sorted lists
+    *head = sortedMerge(a, b);
+}
+
+void frontBackSplit(list_ele_t *source,
+                    list_ele_t **frontRef,
+                    list_ele_t **backRef)
+{
+    // if the length is less than 2, handle it separately
+    if (source == NULL || source->next == NULL) {
+        *frontRef = source;
+        *backRef = NULL;
+        return;
+    }
+
+    list_ele_t *slow = source;
+    list_ele_t *fast = source->next;
+
+    // advance `fast` two nodes, and advance `slow` one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // `slow` is before the midpoint in the list, so split it in two
+    // at that point.
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+
+list_ele_t *sortedMerge(list_ele_t *a, list_ele_t *b)
+{
+    // base cases
+    if (a == NULL)
+        return b;
+
+    else if (b == NULL)
+        return a;
+
+    list_ele_t *result = NULL;
+
+    // pick either `a` or `b`, and recur
+    if (strcmp(a->value, b->value) <= 0) {
+        result = a;
+        result->next = sortedMerge(a->next, b);
+    } else {
+        result = b;
+        result->next = sortedMerge(a, b->next);
+    }
+
+    return result;
 }
