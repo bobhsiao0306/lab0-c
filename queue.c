@@ -14,8 +14,7 @@ queue_t *q_new()
     queue_t *q = malloc(sizeof(queue_t));
     if (q == NULL) /*malloc return NULL*/
     {
-        printf("Memory allocation failed\n");
-        exit(-1);
+        return NULL;
     } else /*malloc succeed*/
     {
         q->head = NULL;
@@ -92,7 +91,8 @@ bool q_insert_tail(queue_t *q, char *s)
     } else {
         strncpy(newh->value, s, strlen(s) + 1);
         newh->next = NULL;
-        q->tail->next = newh;
+        if (q->tail != NULL)
+            q->tail->next = newh;
         q->tail = newh;
         q->size++;
         if (q->size == 1)
@@ -111,18 +111,28 @@ bool q_insert_tail(queue_t *q, char *s)
  */
 bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
-    if (q == NULL || q->head == NULL)
+    if (q == NULL || q->head == NULL || sp == NULL)
         return false;
-    if (!strncmp(q->head->value, sp, strlen(sp))) {
-        list_ele_t *tmp = q->head;
-        q->head = q->head->next;
+
+    list_ele_t *tmp = q->head;
+    q->head = q->head->next;
+
+    if (strlen(tmp->value) >= bufsize) {
         strncpy(sp, tmp->value, bufsize - 1);
-        free(tmp->value);
-        free(tmp);
-        q->size--;
-        return true;
-    } else
-        return false;
+        sp[bufsize - 1] = '\0';
+    } else {
+        strncpy(sp, tmp->value, strlen(tmp->value));
+        sp[strlen(tmp->value)] = '\0';
+    }
+
+    free(tmp->value);
+    free(tmp);
+
+    q->size--;
+    if (q->size == 0)
+        q->tail = NULL;
+
+    return true;
 }
 
 /*
@@ -131,6 +141,9 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
+    if (q == NULL)
+        return 0;
+
     return q->size;
 }
 
@@ -168,13 +181,80 @@ void q_sort(queue_t *q)
     if (q == NULL || q->size == 0 || q->size == 1)
         return;
 
-    mergesort(&q->head);
+    // merge sort with iterative
+    for (int i = 1; i < q->size; i *= 2) {
+        list_ele_t *ptr = q->head;
+        list_ele_t *buf = q->head;
+        bool init = true;
+        while (ptr != NULL) {
+            list_ele_t *a = ptr;
+            for (int j = 0; j < i; j++) {
+                if (ptr == NULL)
+                    break;
+                ptr = ptr->next;
+            }
+            list_ele_t *b = ptr;
+            for (int j = 0; j < i; j++) {
+                if (ptr == NULL)
+                    break;
+                ptr = ptr->next;
+            }
+
+            int a_count = 0, b_count = 0;
+            while (a_count < i && b_count < i && a != NULL && b != NULL) {
+                if (strcmp(a->value, b->value) <= 0) {
+                    if (init) {
+                        q->head = a;
+                        init = false;
+                    } else {
+                        buf->next = a;
+                    }
+                    buf = a;
+                    a = a->next;
+                    a_count++;
+                } else {
+                    if (init) {
+                        q->head = b;
+                        init = false;
+                    } else {
+                        buf->next = b;
+                    }
+                    buf = b;
+                    b = b->next;
+                    b_count++;
+                }
+            }
+
+            if (a_count == i) {
+                while (b_count < i && b != NULL) {
+                    buf->next = b;
+                    buf = b;
+                    b = b->next;
+                    q->tail = buf;
+                    q->tail->next = NULL;
+                    b_count++;
+                }
+            } else {
+                while (a_count < i && a != NULL) {
+                    buf->next = a;
+                    buf = a;
+                    a = a->next;
+                    q->tail = buf;
+                    q->tail->next = NULL;
+                    a_count++;
+                }
+            }
+        }
+    }
+
+    // merge sort with recursive
+    /*mergesort(&q->head, q->size);
 
     list_ele_t *buf = q->head;
     while (buf) {
         q->tail = buf;
         buf = buf->next;
-    }
+    }*/
 }
 
 void mergesort(list_ele_t **head)
@@ -184,8 +264,7 @@ void mergesort(list_ele_t **head)
         return;
     }
 
-    list_ele_t *a;
-    list_ele_t *b;
+    list_ele_t *a, *b;
 
     // split `head` into `a` and `b` sublists
     frontBackSplit(*head, &a, &b);
@@ -240,6 +319,8 @@ list_ele_t *sortedMerge(list_ele_t *a, list_ele_t *b)
     list_ele_t *result = NULL;
 
     // pick either `a` or `b`, and recur
+    // int len = strlen(a->value) > strlen(b->value) ? strlen(a->value) :
+    // strlen(b->value);
     if (strcmp(a->value, b->value) <= 0) {
         result = a;
         result->next = sortedMerge(a->next, b);
